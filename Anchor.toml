@@ -1,0 +1,18 @@
+[toolchain]
+
+[features]
+seeds = false
+skip-lint = false
+
+[programs.localnet]
+gig_hub_coin_test = "GH1vm3L2rob7GzLLQCi5t9shgJDXSWCTA8zgJjhGNKXx"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "https://api.devnet.solana.com"
+wallet = "/home/rudy/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
