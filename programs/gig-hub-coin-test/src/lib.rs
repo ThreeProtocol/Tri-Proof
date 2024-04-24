@@ -1,14 +1,3 @@
-use anchor_lang::{prelude::*, system_program};
-use anchor_spl::token::Transfer;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount},
-};
-use solana_program::account_info::AccountInfo;
-
-
-declare_id!("GH1vm3L2rob7GzLLQCi5t9shgJDXSWCTA8zgJjhGNKXx");
-
 #[program]
 pub mod gig_hub_coin_test {
 
