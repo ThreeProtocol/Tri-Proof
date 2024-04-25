@@ -16,6 +16,7 @@ pub mod multisig {
         multisig.owner_set_seqno = 0;
         Ok(())
     }
+	
 
     // Creates a new transaction account
     // which must be one of the owners of the multisig.
