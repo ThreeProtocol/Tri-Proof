@@ -10,9 +10,9 @@ use multisig_derive::MultisigPack;
 /// Minimum number of multisignature signers
 pub const MIN_SIGNERS: usize = 1;
 /// Maximum number of multisignature signers
-pub const MAX_SIGNERS: usize = 10;
+pub const MAX_SIGNERS: usize = 3;
 /// Maximum number of pending transactions
-pub const MAX_TRANSACTIONS: usize = 15;
+pub const MAX_TRANSACTIONS: usize = 3;
 
 #[derive(Debug, BorshSerialize, BorshDeserialize, MultisigPack)]
 #[multisig_pack(length = 833)]
