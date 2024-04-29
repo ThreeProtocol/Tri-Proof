@@ -1,4 +1,3 @@
-
 #![allow(clippy::result_large_err)]
 #![deny(arithmetic_overflow)]
 #![deny(unused_must_use)]
@@ -20,7 +19,6 @@ pub mod errors;
 pub mod instructions;
 pub mod state;
 mod utils;
-
 
 
 
@@ -66,11 +64,6 @@ pub mod squads_multisig_program {
         ProgramConfig::program_config_set_treasury(ctx, args)
     }
 
-    /// Create a multisig.
-    #[allow(deprecated)]
-    pub fn multisig_create(ctx: Context<MultisigCreate>, args: MultisigCreateArgs) -> Result<()> {
-        MultisigCreate::multisig_create(ctx, args)
-    }
 
     /// Create a multisig.
     pub fn multisig_create_v2(
@@ -93,7 +86,7 @@ pub mod squads_multisig_program {
         ctx: Context<MultisigConfig>,
         args: MultisigRemoveMemberArgs,
     ) -> Result<()> {
-        MultisigConfig::multisig_remove_mem ber(ctx, args)
+        MultisigConfig::multisig_remove_member(ctx, args)
     }
 
     /// Set the `time_lock` config parameter for the controlled multisig.
@@ -200,7 +193,7 @@ pub mod squads_multisig_program {
     /// Update status of a multisig proposal from `Draft` to `Active`.
     pub fn proposal_activate(ctx: Context<ProposalActivate>) -> Result<()> {
         ProposalActivate::proposal_activate(ctx)
-    }
+    } 
 
     /// Approve a multisig proposal on behalf of the `member`.
     /// The proposal must be `Active`.
