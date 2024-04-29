@@ -1,45 +1,85 @@
-use thiserror::Error;
+use anchor_lang::prelude::*;
 
-use solana_program::program_error::ProgramError;
-
-#[derive(Error, Debug, Copy, Clone)]
+#[error_code]
 pub enum MultisigError {
-    #[error("The given owner is not part of this multisig.")]
-    InvalidOwner,
-    #[error("Owners length must be non zero.")]
-    InvalidOwnersLen,
-    #[error("Not enough owners signed this transaction.")]
-    NotEnoughSigners,
-    #[error("Cannot delete a transaction that has been signed by an owner.")]
-    TransactionAlreadySigned,
-    #[error("Overflow when adding.")]
-    Overflow,
-    #[error("Cannot delete a transaction the owner did not create.")]
-    UnableToDelete,
-    #[error("The given transaction has already been executed.")]
-    AlreadyExecuted,
-    #[error("Threshold must be less than or equal to the number of owners.")]
+    #[msg("Found multiple members with the same pubkey")]
+    DuplicateMember,
+    #[msg("Members array is empty")]
+    EmptyMembers,
+    #[msg("Too many members, can be up to 65535")]
+    TooManyMembers,
+    #[msg("Invalid threshold, must be between 1 and number of members with Vote permission")]
     InvalidThreshold,
-    #[error("Owners must be unique")]
-    UniqueOwners,
-    #[error("Pending transaction limit exceeded")]
-    PendingTransactionLimit,
-    #[error("Invalid transaction")]
-    InvalidTransaction,
-    #[error("Should be no pending transactions")]
-    PendingTransactionExist,
-    #[error("Owners overflow")]
-    OwnersOverflow,
-    #[error("Owners lack off")]
-    OwnersLackOff,
-    #[error("Last transaction should be 'DeletePendingTransactions'")]
-    InvalidLastTransaction,
-    #[error("Owner already exist")]
-    OwnerAlreadyExist,
-}
-
-impl From<MultisigError> for ProgramError {
-    fn from(e: MultisigError) -> Self {
-        ProgramError::Custom(e as u32)
-    }
+    #[msg("Attempted to perform an unauthorized action")]
+    Unauthorized,
+    #[msg("Provided pubkey is not a member of multisig")]
+    NotAMember,
+    #[msg("TransactionMessage is malformed.")]
+    InvalidTransactionMessage,
+    #[msg("Proposal is stale")]
+    StaleProposal,
+    #[msg("Invalid proposal status")]
+    InvalidProposalStatus,
+    #[msg("Invalid transaction index")]
+    InvalidTransactionIndex,
+    #[msg("Member already approved the transaction")]
+    AlreadyApproved,
+    #[msg("Member already rejected the transaction")]
+    AlreadyRejected,
+    #[msg("Member already cancelled the transaction")]
+    AlreadyCancelled,
+    #[msg("Wrong number of accounts provided")]
+    InvalidNumberOfAccounts,
+    #[msg("Invalid account provided")]
+    InvalidAccount,
+    #[msg("Cannot remove last member")]
+    RemoveLastMember,
+    #[msg("Members don't include any voters")]
+    NoVoters,
+    #[msg("Members don't include any proposers")]
+    NoProposers,
+    #[msg("Members don't include any executors")]
+    NoExecutors,
+    #[msg("`stale_transaction_index` must be <= `transaction_index`")]
+    InvalidStaleTransactionIndex,
+    #[msg("Instruction not supported for controlled multisig")]
+    NotSupportedForControlled,
+    #[msg("Proposal time lock has not been released")]
+    TimeLockNotReleased,
+    #[msg("Config transaction must have at least one action")]
+    NoActions,
+    #[msg("Missing account")]
+    MissingAccount,
+    #[msg("Invalid mint")]
+    InvalidMint,
+    #[msg("Invalid destination")]
+    InvalidDestination,
+    #[msg("Spending limit exceeded")]
+    SpendingLimitExceeded,
+    #[msg("Decimals don't match the mint")]
+    DecimalsMismatch,
+    #[msg("Member has unknown permission")]
+    UnknownPermission,
+    #[msg("Account is protected, it cannot be passed into a CPI as writable")]
+    ProtectedAccount,
+    #[msg("Time lock exceeds the maximum allowed (90 days)")]
+    TimeLockExceedsMaxAllowed,
+    #[msg("Account is not owned by Multisig program")]
+    IllegalAccountOwner,
+    #[msg("Rent reclamation is disabled for this multisig")]
+    RentReclamationDisabled,
+    #[msg("Invalid rent collector address")]
+    InvalidRentCollector,
+    #[msg("Proposal is for another multisig")]
+    ProposalForAnotherMultisig,
+    #[msg("Transaction is for another multisig")]
+    TransactionForAnotherMultisig,
+    #[msg("Transaction doesn't match proposal")]
+    TransactionNotMatchingProposal,
+    #[msg("Transaction is not last in batch")]
+    TransactionNotLastInBatch,
+    #[msg("Batch is not empty")]
+    BatchNotEmpty,
+    #[msg("Invalid SpendingLimit amount")]
+    SpendingLimitInvalidAmount,
 }
