@@ -1,473 +1,278 @@
-use anchor_lang::{prelude::*, system_program};
-use anchor_spl::token::Transfer;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount},
-};
-use solana_program::account_info::AccountInfo;
 
+#![allow(clippy::result_large_err)]
+#![deny(arithmetic_overflow)]
+#![deny(unused_must_use)]
+// #![deny(clippy::arithmetic_side_effects)]
+// #![deny(clippy::integer_arithmetic)]
 
-declare_id!("GH1vm3L2rob7GzLLQCi5t9shgJDXSWCTA8zgJjhGNKXx");
+// Re-export anchor_lang for convenience.
+pub use anchor_lang;
+use anchor_lang::prelude::*;
+#[cfg(not(feature = "no-entrypoint"))]
+use solana_security_txt::security_txt;
+
+pub use instructions::ProgramConfig;
+pub use instructions::*;
+pub use state::*;
+pub use utils::SmallVec;
+
+pub mod errors;
+pub mod instructions;
+pub mod state;
+mod utils;
+
+#[cfg(not(feature = "no-entrypoint"))]
+security_txt! {
+    name: "Squads Multisig Program",
+    project_url: "https://squads.so",
+    contacts: "email:security@sqds.io,email:contact@osec.io",
+    policy: "https://github.com/Squads-Protocol/v4/blob/main/SECURITY.md",
+    preferred_languages: "en",
+    source_code: "https://github.com/squads-protocol/v4",
+    auditors: "OtterSec, Neodyme"
+}
+
+#[cfg(not(feature = "testing"))]
+declare_id!("SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf");
+
+#[cfg(feature = "testing")]
+declare_id!("GyhGAqjokLwF9UXdQ2dR5Zwiup242j4mX4J1tSMKyAmD");
 
 #[program]
-pub mod gig_hub_coin_test {
-
-
+pub mod squads_multisig_program {
     use super::*;
-    pub fn initcounter(_ctx: Context<CreateCounter>) -> Result<()> {
-        msg!("counter got Initialised");
 
-        Ok(())
-    }
-
-    pub fn initializestatepda(
-        ctx: Context<Initialisedstatepda>,
-        _bump: u8,
-        price: u64,
-        assign_to: Pubkey,
-        fee_payer_freelancer: bool,
+    /// Initialize the program config.
+    pub fn program_config_init(
+        ctx: Context<ProgramConfigInit>,
+        args: ProgramConfigInitArgs,
     ) -> Result<()> {
-        msg!("state got Initialised");
-        let state_pda = &mut ctx.accounts.statepda;
-
-        state_pda.amount = price;
-        state_pda.owner = ctx.accounts.owner.key();
-        state_pda.assign_wallet = assign_to;
-        ctx.accounts.counter_pda.count += 1;
-        state_pda.assigned_counter = ctx.accounts.counter_pda.count;
-        state_pda.status = "Waiting".to_string();
-        if fee_payer_freelancer == true {
-            state_pda.fee_payer_freelancer = true;
-        } else {
-            state_pda.fee_payer_freelancer = false;
-        }
-        Ok(())
+        ProgramConfigInit::program_config_init(ctx, args)
     }
 
-    pub fn initialisetokenpda(ctx: Context<Initialisetokenpda>, _bump1: u8) -> Result<()> {
-        msg!("token got Initialised");
-        let pda = ctx.accounts.tokenpda.key();
-        ctx.accounts.statepda.pda_ata_adress = Some(ctx.accounts.tokenpda.key());
-        msg!("token pda : {}", pda);
-        Ok(())
-    }
-
-    pub fn sendsoltopda(ctx: Context<SendSolPDA>) -> Result<()> {
-        let state_account = &mut ctx.accounts.statepda;
-        let signer = &mut ctx.accounts.owner;
-        let fee_account = &mut ctx.accounts.fee_account_pubkey;
-        let amount_for_fee = (state_account.amount / 100) * 7;
-        let amount_for_pda = if state_account.fee_payer_freelancer {
-            state_account.amount - amount_for_fee
-        } else {
-            state_account.amount
-        };
-
-        if amount_for_pda < 0 {
-            return err!(MyError::InvalidCalculation);
-        } else {
-            if fee_account.key().to_string() == "5Uw3sWy6oRu5Nt7jqcUVLqMzaQd9MdrpCfyXFYzCcA5h"
-                && state_account.assign_wallet.key() == signer.key() && state_account.status == "Waiting"
-            {
-                system_program::transfer(
-                    CpiContext::new(
-                        ctx.accounts.system_program.to_account_info(),
-                        system_program::Transfer {
-                            from: signer.to_account_info(),
-                            to: state_account.to_account_info(),
-                        },
-                    ),
-                    amount_for_pda,
-                )?;
-
-                state_account.pda_total_amount = amount_for_pda;
-
-                system_program::transfer(
-                    CpiContext::new(
-                        ctx.accounts.system_program.to_account_info(),
-                        system_program::Transfer {
-                            from: signer.to_account_info(),
-                            to: fee_account.to_account_info(),
-                        },
-                    ),
-                    amount_for_fee,
-                )?;
-
-                state_account.status = "InProgress".to_string();
-            } else {
-                return err!(MyError::InvalidAccount);
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn sendusdctopda(ctx: Context<SendTokenPDA>, _bump1: u8, _bump2: u8) -> Result<()> {
-        msg!("token process start for PDA transfer...");
-        let state = &mut ctx.accounts.statepda;
-        state.bump = _bump1;
-        let fee_account = &mut ctx.accounts.fee_account;
-        let bump_vector = _bump1.to_le_bytes();
-
-        let amount_for_fee = (state.amount / 100) * 7;
-        let mut amount_for_pda = 0;
-
-        if state.fee_payer_freelancer {
-            amount_for_pda = state.amount - amount_for_fee;
-        } else {
-            amount_for_pda = state.amount + amount_for_fee;
-        }
-
-        let sender = &ctx.accounts.owner;
-        let inner = vec![
-            sender.key.as_ref(),
-            sender.key.as_ref(),
-            "state".as_ref(),
-            bump_vector.as_ref(),
-        ];
-        let outer = vec![inner.as_slice()];
-
-        if amount_for_pda < 0 {
-            return err!(MyError::InvalidCalculation);
-        } else {
-            if fee_account.key().to_string() == "DJAWin1NF25gaFFStbmY9WfkKarRbrWAE2CyTtkYqawD"
-                && state.assign_wallet.key() == ctx.accounts.owner.key() && state.status == "Waiting"
-            {
-                //for account to PDA
-                let transfer_instruction = Transfer {
-                    from: ctx.accounts.deposit_token_account.to_account_info(),
-                    to: ctx.accounts.tokenpda.to_account_info(),
-                    authority: sender.to_account_info(),
-                };
-
-                let cpi_ctx = CpiContext::new_with_signer(
-                    ctx.accounts.token_program.to_account_info(),
-                    transfer_instruction,
-                    outer.as_slice(),
-                );
-
-                msg!("transfer call start");
-
-                anchor_spl::token::transfer(cpi_ctx, amount_for_pda)?;
-                state.pda_total_amount = amount_for_pda;
-
-                //for account to fee account
-                let transfer_instruction2 = Transfer {
-                    from: ctx.accounts.deposit_token_account.to_account_info(),
-                    to: fee_account.to_account_info(),
-                    authority: sender.to_account_info(),
-                };
-
-                let cpi_ctx2 = CpiContext::new_with_signer(
-                    ctx.accounts.token_program.to_account_info(),
-                    transfer_instruction2,
-                    outer.as_slice(),
-                );
-
-                msg!("transfer call start for fee");
-
-                anchor_spl::token::transfer(cpi_ctx2, amount_for_fee)?;
-
-                state.status = "InProgress".to_string();
-                msg!("succesfully transfered");
-            } else {
-                return err!(MyError::InvalidAccount);
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn sendusdctoreciever(ctx: Context<SendTokenWinner>, _bump1: u8, _bump2: u8) -> Result<()> {
-        msg!("token transfer to reciever started from backend...");
-        let assigned_counter_info = &ctx.accounts.statepda.assigned_counter.to_be_bytes();
-        let bump_vector = _bump1.to_le_bytes();
-        let amount = ctx.accounts.statepda.pda_total_amount;
-        //let dep = &mut ctx.accounts.deposit_token_account.key();
-        let sender = ctx.accounts.statepda.owner;
-        let inner = vec![
-            sender.as_ref(),
-            assigned_counter_info.as_ref(),
-            sender.as_ref(),
-            "state".as_ref(),
-            bump_vector.as_ref(),
-        ];
-        let outer = vec![inner.as_slice()];
-
-        if (ctx.accounts.statepda.status == "Cancaled"
-            && ctx.accounts.reciever.key() == ctx.accounts.statepda.assign_wallet.key())
-            || (ctx.accounts.statepda.status == "Completed"
-                && ctx.accounts.reciever.key() == ctx.accounts.statepda.owner.key())
-        {
-            let transfer_instruction = Transfer {
-                from: ctx.accounts.tokenpda.to_account_info(),
-                to: ctx.accounts.wallet_to_deposit_to.to_account_info(),
-                authority: ctx.accounts.statepda.to_account_info(),
-            };
-    
-            let cpi_ctx = CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                transfer_instruction,
-                outer.as_slice(),
-            );
-    
-            msg!("trasnfer call start");
-            let state = &mut ctx.accounts.statepda;
-            state.status = "ContractClosed".to_string();
-            anchor_spl::token::transfer(cpi_ctx, amount)?;
-        }else{
-            return err!(MyError::InvalidAccount);
-        }
-
-
-        Ok(())
-    }
-
-    pub fn sendsoltoreciever(ctx: Context<SendSOLtoReciever>, _bump1: u8) -> Result<()> {
-        if (ctx.accounts.statepda.status == "Cancaled"
-            && ctx.accounts.owner.key() == ctx.accounts.statepda.assign_wallet.key())
-            || (ctx.accounts.statepda.status == "Completed"
-                && ctx.accounts.owner.key() == ctx.accounts.statepda.owner.key())
-        {
-            **ctx
-                .accounts
-                .statepda
-                .to_account_info()
-                .try_borrow_mut_lamports()? -= ctx.accounts.statepda.pda_total_amount;
-            **ctx
-                .accounts
-                .owner
-                .to_account_info()
-                .try_borrow_mut_lamports()? += ctx.accounts.statepda.pda_total_amount;
-            msg!("Send Sol from PDA to Reciever Completed");
-
-            let state = &mut ctx.accounts.statepda;
-            state.status = "ContractClosed".to_string();
-        } else {
-            return err!(MyError::InvalidAccount);
-        }
-
-        Ok(())
-    }
-
-    pub fn update_status(
-        ctx: Context<UpdateStatus>,
-        is_problem: bool,
-        admin_account: Pubkey,
-        solving_to: u8,
+    /// Set the `authority` parameter of the program config.
+    pub fn program_config_set_authority(
+        ctx: Context<ProgramConfig>,
+        args: ProgramConfigSetAuthorityArgs,
     ) -> Result<()> {
-        let state_account = &mut ctx.accounts.statepda;
-        let signer = &mut ctx.accounts.owner;
-        if state_account.status == "InProgress"
-            && state_account.owner.key() == signer.key()
-            && is_problem == false
-        {
-            state_account.status = "Cancaled".to_string();
-            msg!("Project cancelled by Employee");
-        } else if state_account.status == "InProgress"
-            && state_account.assign_wallet.key() == signer.key()
-            && is_problem == false
-        {
-            state_account.status = "Completed".to_string();
-            msg!("Project completed by Employer");
-        }
-
-        if is_problem == true
-            && (state_account.assign_wallet.key() == signer.key()
-                || state_account.owner.key() == signer.key())
-            && state_account.status == "InProgress" && admin_account.to_string() == "AiUUU6y6Axtb6v8EhdH6xnnPQoZ1wFQ4R2Z6U4Pm3fQM"
-        {
-            state_account.assigned_admin = admin_account;
-            state_account.status = "ProblemSolving".to_string();
-            msg!("Project status changed to Problem Solving");
-        }
-
-        if signer.key() == state_account.assigned_admin.key()
-            && state_account.status == "ProblemSolving"
-        {
-            //solving 1 for Employee solving 2 for Employer
-            //Admin decide right people is Employee
-            if solving_to == 1 {
-                state_account.status = "Completed".to_string();
-                msg!("Project problem solving by Admin (Reciever will be Employee)");
-            } else if solving_to == 2 {
-                state_account.status = "Cancaled".to_string();
-                msg!("Project problem solving by Admin (Reciever will be Employer)");
-            }
-        }
-
-        Ok(())
+        ProgramConfig::program_config_set_authority(ctx, args)
     }
-}
 
-#[derive(Accounts)]
-#[instruction(_bump : u8)]
-pub struct Initialisedstatepda<'info> {
-    #[account(
-            init,
-            payer = owner,
-            seeds=[owner.key.as_ref(),&(counter_pda.count + 1).to_le_bytes(),owner.key().as_ref(),"state".as_ref()],
-            bump,
-            space=200
-        )]
-    statepda: Account<'info, State>,
-    #[account(
-            mut,
-            seeds = [b"counter"],
-            bump,
-        )]
-    pub counter_pda: Account<'info, Counter>,
-    #[account(mut)]
-    pub owner: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
+    /// Set the `multisig_creation_fee` parameter of the program config.
+    pub fn program_config_set_multisig_creation_fee(
+        ctx: Context<ProgramConfig>,
+        args: ProgramConfigSetMultisigCreationFeeArgs,
+    ) -> Result<()> {
+        ProgramConfig::program_config_set_multisig_creation_fee(ctx, args)
+    }
 
-#[derive(Accounts)]
-#[instruction(_bump : u8)]
-pub struct Initialisetokenpda<'info> {
-    #[account(
-            init,
-            seeds = [owner.key.as_ref(),&(statepda.assigned_counter).to_le_bytes() ,owner.key().as_ref()],
-            bump,
-            payer = owner,
-            token::mint = mint,
-            token::authority = statepda,
-        )]
-    pub tokenpda: Account<'info, TokenAccount>,
+    /// Set the `treasury` parameter of the program config.
+    pub fn program_config_set_treasury(
+        ctx: Context<ProgramConfig>,
+        args: ProgramConfigSetTreasuryArgs,
+    ) -> Result<()> {
+        ProgramConfig::program_config_set_treasury(ctx, args)
+    }
 
-    #[account(
-            mut,
-            seeds = [owner.key.as_ref(),&(statepda.assigned_counter).to_le_bytes() ,owner.key().as_ref(), "state".as_ref()],
-            bump,
-        )]
-    pub statepda: Account<'info, State>,
-    pub mint: Account<'info, Mint>,
-    #[account(mut)]
-    pub owner: Signer<'info>,
-    #[account(mut)]
-    pub deposit_token_account: Account<'info, TokenAccount>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
-    pub token_program: Program<'info, Token>,
-}
+    /// Create a multisig.
+    #[allow(deprecated)]
+    pub fn multisig_create(ctx: Context<MultisigCreate>, args: MultisigCreateArgs) -> Result<()> {
+        MultisigCreate::multisig_create(ctx, args)
+    }
 
-#[derive(Accounts)]
-pub struct SendSolPDA<'info> {
-    pub system_program: Program<'info, System>,
-    #[account(mut)]
-    pub statepda: Account<'info, State>,
-    //iknow its problem
-    #[account(mut)]
-    /// CHECK: asdasd
-    pub fee_account_pubkey: AccountInfo<'info>,
+    /// Create a multisig.
+    pub fn multisig_create_v2(
+        ctx: Context<MultisigCreateV2>,
+        args: MultisigCreateArgsV2,
+    ) -> Result<()> {
+        MultisigCreateV2::multisig_create(ctx, args)
+    }
 
-    #[account(mut)]
-    pub owner: Signer<'info>,
-}
+    /// Add a new member to the controlled multisig.
+    pub fn multisig_add_member(
+        ctx: Context<MultisigConfig>,
+        args: MultisigAddMemberArgs,
+    ) -> Result<()> {
+        MultisigConfig::multisig_add_member(ctx, args)
+    }
 
-#[derive(Accounts)]
-pub struct SendTokenPDA<'info> {
-    #[account(mut)]
-    pub tokenpda: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-    )]
-    pub statepda: Account<'info, State>,
-    pub mint: Account<'info, Mint>,
-    #[account(mut)]
-    pub owner: Signer<'info>,
-    #[account(mut)]
-    pub deposit_token_account: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub fee_account: Account<'info, TokenAccount>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
-    pub token_program: Program<'info, Token>,
-}
+    /// Remove a member/key from the controlled multisig.
+    pub fn multisig_remove_member(
+        ctx: Context<MultisigConfig>,
+        args: MultisigRemoveMemberArgs,
+    ) -> Result<()> {
+        MultisigConfig::multisig_remove_member(ctx, args)
+    }
 
-#[derive(Accounts)]
-pub struct CreateCounter<'info> {
-    #[account(
-            init,
-            payer = payer,
-            space = 100,
-            seeds = [b"counter"],
-            bump,
-        )]
-    pub counter_pda: Account<'info, Counter>,
+    /// Set the `time_lock` config parameter for the controlled multisig.
+    pub fn multisig_set_time_lock(
+        ctx: Context<MultisigConfig>,
+        args: MultisigSetTimeLockArgs,
+    ) -> Result<()> {
+        MultisigConfig::multisig_set_time_lock(ctx, args)
+    }
 
-    #[account(mut)]
-    pub payer: Signer<'info>,
+    /// Set the `threshold` config parameter for the controlled multisig.
+    pub fn multisig_change_threshold(
+        ctx: Context<MultisigConfig>,
+        args: MultisigChangeThresholdArgs,
+    ) -> Result<()> {
+        MultisigConfig::multisig_change_threshold(ctx, args)
+    }
 
-    pub system_program: Program<'info, System>,
-}
+    /// Set the multisig `config_authority`.
+    pub fn multisig_set_config_authority(
+        ctx: Context<MultisigConfig>,
+        args: MultisigSetConfigAuthorityArgs,
+    ) -> Result<()> {
+        MultisigConfig::multisig_set_config_authority(ctx, args)
+    }
 
-#[derive(Accounts)]
-pub struct SendTokenWinner<'info> {
-    #[account(mut)]
-    pub tokenpda: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub statepda: Account<'info, State>,
-    #[account(mut)]
-    pub wallet_to_deposit_to: Account<'info, TokenAccount>,
+    /// Set the multisig `rent_collector`.
+    pub fn multisig_set_rent_collector(
+        ctx: Context<MultisigConfig>,
+        args: MultisigSetRentCollectorArgs,
+    ) -> Result<()> {
+        MultisigConfig::multisig_set_rent_collector(ctx, args)
+    }
 
-    //pub deposit_token_account: Account<'info, TokenAccount>,
-    #[account(mut)]
-    /// CHECK not read write to this account
-    pub reciever: Signer<'info>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
-    pub token_program: Program<'info, Token>,
-}
+    /// Create a new spending limit for the controlled multisig.
+    pub fn multisig_add_spending_limit(
+        ctx: Context<MultisigAddSpendingLimit>,
+        args: MultisigAddSpendingLimitArgs,
+    ) -> Result<()> {
+        MultisigAddSpendingLimit::multisig_add_spending_limit(ctx, args)
+    }
 
-#[derive(Accounts)]
-pub struct UpdateStatus<'info> {
-    #[account(mut)]
-    pub statepda: Account<'info, State>,
-    #[account(mut)]
-    pub owner: Signer<'info>,
+    /// Remove the spending limit from the controlled multisig.
+    pub fn multisig_remove_spending_limit(
+        ctx: Context<MultisigRemoveSpendingLimit>,
+        args: MultisigRemoveSpendingLimitArgs,
+    ) -> Result<()> {
+        MultisigRemoveSpendingLimit::multisig_remove_spending_limit(ctx, args)
+    }
 
-    pub system_program: Program<'info, System>,
-}
+    /// Create a new config transaction.
+    pub fn config_transaction_create(
+        ctx: Context<ConfigTransactionCreate>,
+        args: ConfigTransactionCreateArgs,
+    ) -> Result<()> {
+        ConfigTransactionCreate::config_transaction_create(ctx, args)
+    }
 
-#[derive(Accounts)]
-pub struct SendSOLtoReciever<'info> {
-    #[account(
-        mut
-    )]
-    pub statepda: Account<'info, State>,
-    #[account(mut)]
-    pub owner: Signer<'info>,
+    /// Execute a config transaction.
+    /// The transaction must be `Approved`.
+    pub fn config_transaction_execute<'info>(
+        ctx: Context<'_, '_, 'info, 'info, ConfigTransactionExecute<'info>>,
+    ) -> Result<()> {
+        ConfigTransactionExecute::config_transaction_execute(ctx)
+    }
 
-    pub system_program: Program<'info, System>,
-}
+    /// Create a new vault transaction.
+    pub fn vault_transaction_create(
+        ctx: Context<VaultTransactionCreate>,
+        args: VaultTransactionCreateArgs,
+    ) -> Result<()> {
+        VaultTransactionCreate::vault_transaction_create(ctx, args)
+    }
 
-#[account]
-#[derive(Default)]
-pub struct State {
-    bump: u8,
-    amount: u64,
-    assign_wallet: Pubkey,
-    owner: Pubkey,
-    status: String,
-    assigned_counter: u8,
-    pda_ata_adress: Option<Pubkey>,
-    fee_payer_freelancer: bool,
-    assigned_admin: Pubkey,
-    pda_total_amount: u64,
-}
+    /// Execute a vault transaction.
+    /// The transaction must be `Approved`.
+    pub fn vault_transaction_execute(ctx: Context<VaultTransactionExecute>) -> Result<()> {
+        VaultTransactionExecute::vault_transaction_execute(ctx)
+    }
 
-#[account]
-#[derive(Default)]
-pub struct Counter {
-    count: u8,
-}
+    /// Create a new batch.
+    pub fn batch_create(ctx: Context<BatchCreate>, args: BatchCreateArgs) -> Result<()> {
+        BatchCreate::batch_create(ctx, args)
+    }
 
-#[error_code]
-pub enum MyError {
-    #[msg("Accounts doenst't mach")]
-    InvalidAccount,
-    #[msg("Amount couldn't calculated")]
-    InvalidCalculation,
+    /// Add a transaction to the batch.
+    pub fn batch_add_transaction(
+        ctx: Context<BatchAddTransaction>,
+        args: BatchAddTransactionArgs,
+    ) -> Result<()> {
+        BatchAddTransaction::batch_add_transaction(ctx, args)
+    }
+
+    /// Execute a transaction from the batch.
+    pub fn batch_execute_transaction(ctx: Context<BatchExecuteTransaction>) -> Result<()> {
+        BatchExecuteTransaction::batch_execute_transaction(ctx)
+    }
+
+    /// Create a new multisig proposal.
+    pub fn proposal_create(ctx: Context<ProposalCreate>, args: ProposalCreateArgs) -> Result<()> {
+        ProposalCreate::proposal_create(ctx, args)
+    }
+
+    /// Update status of a multisig proposal from `Draft` to `Active`.
+    pub fn proposal_activate(ctx: Context<ProposalActivate>) -> Result<()> {
+        ProposalActivate::proposal_activate(ctx)
+    }
+
+    /// Approve a multisig proposal on behalf of the `member`.
+    /// The proposal must be `Active`.
+    pub fn proposal_approve(ctx: Context<ProposalVote>, args: ProposalVoteArgs) -> Result<()> {
+        ProposalVote::proposal_approve(ctx, args)
+    }
+
+    /// Reject a multisig proposal on behalf of the `member`.
+    /// The proposal must be `Active`.
+    pub fn proposal_reject(ctx: Context<ProposalVote>, args: ProposalVoteArgs) -> Result<()> {
+        ProposalVote::proposal_reject(ctx, args)
+    }
+
+    /// Cancel a multisig proposal on behalf of the `member`.
+    /// The proposal must be `Approved`.
+    pub fn proposal_cancel(ctx: Context<ProposalVote>, args: ProposalVoteArgs) -> Result<()> {
+        ProposalVote::proposal_cancel(ctx, args)
+    }
+
+    /// Use a spending limit to transfer tokens from a multisig vault to a destination account.
+    pub fn spending_limit_use(
+        ctx: Context<SpendingLimitUse>,
+        args: SpendingLimitUseArgs,
+    ) -> Result<()> {
+        SpendingLimitUse::spending_limit_use(ctx, args)
+    }
+
+    /// Closes a `ConfigTransaction` and the corresponding `Proposal`.
+    /// `transaction` can be closed if either:
+    /// - the `proposal` is in a terminal state: `Executed`, `Rejected`, or `Cancelled`.
+    /// - the `proposal` is stale.
+    pub fn config_transaction_accounts_close(
+        ctx: Context<ConfigTransactionAccountsClose>,
+    ) -> Result<()> {
+        ConfigTransactionAccountsClose::config_transaction_accounts_close(ctx)
+    }
+
+    /// Closes a `VaultTransaction` and the corresponding `Proposal`.
+    /// `transaction` can be closed if either:
+    /// - the `proposal` is in a terminal state: `Executed`, `Rejected`, or `Cancelled`.
+    /// - the `proposal` is stale and not `Approved`.
+    pub fn vault_transaction_accounts_close(
+        ctx: Context<VaultTransactionAccountsClose>,
+    ) -> Result<()> {
+        VaultTransactionAccountsClose::vault_transaction_accounts_close(ctx)
+    }
+
+    /// Closes a `VaultBatchTransaction` belonging to the `batch` and `proposal`.
+    /// `transaction` can be closed if either:
+    /// - it's marked as executed within the `batch`;
+    /// - the `proposal` is in a terminal state: `Executed`, `Rejected`, or `Cancelled`.
+    /// - the `proposal` is stale and not `Approved`.
+    pub fn vault_batch_transaction_account_close(
+        ctx: Context<VaultBatchTransactionAccountClose>,
+    ) -> Result<()> {
+        VaultBatchTransactionAccountClose::vault_batch_transaction_account_close(ctx)
+    }
+
+    /// Closes Batch and the corresponding Proposal accounts for proposals in terminal states:
+    /// `Executed`, `Rejected`, or `Cancelled` or stale proposals that aren't `Approved`.
+    ///
+    /// This instruction is only allowed to be executed when all `VaultBatchTransaction` accounts
+    /// in the `batch` are already closed: `batch.size == 0`.
+    pub fn batch_accounts_close(ctx: Context<BatchAccountsClose>) -> Result<()> {
+        BatchAccountsClose::batch_accounts_close(ctx)
+    }
 }
