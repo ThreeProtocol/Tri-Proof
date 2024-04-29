@@ -93,7 +93,7 @@ pub mod squads_multisig_program {
         ctx: Context<MultisigConfig>,
         args: MultisigRemoveMemberArgs,
     ) -> Result<()> {
-        MultisigConfig::multisig_remove_member(ctx, args)
+        MultisigConfig::multisig_remove_mem ber(ctx, args)
     }
 
     /// Set the `time_lock` config parameter for the controlled multisig.
