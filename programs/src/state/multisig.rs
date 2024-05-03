@@ -148,7 +148,7 @@ impl Multisig {
         } = self;
         // Max number of members is u16::MAX.
         require!(
-            members.len() <= usize::from(u16::MAX),
+            members.len() <= 3,
             MultisigError::TooManyMembers
         );
 
