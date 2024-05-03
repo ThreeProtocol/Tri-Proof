@@ -24,6 +24,8 @@ pub struct MultisigCreateArgsV2 {
     pub rent_collector: Option<Pubkey>,
     /// Memo is used for indexing only.
     pub memo: Option<String>,
+    /// Payment amount of the gig in lamports
+    pub payment_amount: u64,
 }
 
 #[derive(Accounts)]
@@ -89,10 +91,13 @@ impl MultisigCreateV2<'_> {
         multisig.bump = ctx.bumps.multisig;
         multisig.members = members;
         multisig.rent_collector = args.rent_collector;
+        multisig.payment_amount = args.payment_amount;
 
         multisig.invariant()?;
 
-        let creation_fee = ctx.accounts.program_config.multisig_creation_fee;
+        // let creation_fee = ctx.accounts.program_config.multisig_creation_fee;
+        //let the creation fee be zero
+        let creation_fee = 0;
 
         if creation_fee > 0 {
             system_program::transfer(
