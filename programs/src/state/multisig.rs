@@ -41,6 +41,9 @@ pub struct Multisig {
     /// Members of the multisig.
     pub members: Vec<Member>,
 
+    /// Payment amount of the gig in lamports
+    pub payment_amount: u64,
+
 }
 
 impl Multisig {
@@ -337,6 +340,7 @@ impl Multisig {
 pub struct Member {
     pub key: Pubkey,
     pub permissions: Permissions,
+    pub is_employer: Bool,
 }
 
 #[derive(Clone, Copy)]
@@ -353,7 +357,6 @@ pub enum Permission {
 pub struct Permissions {
     pub mask: u8,
 }
-
 impl Permissions {
     /// Currently unused.
     pub fn from_vec(permissions: &[Permission]) -> Self {

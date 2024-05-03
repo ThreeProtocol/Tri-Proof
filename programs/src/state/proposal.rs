@@ -128,7 +128,7 @@ impl Proposal {
 /// Each variant wraps a timestamp of when the status was set.
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq, Debug)]
 #[non_exhaustive]
-pub enum ProposalStatus {
+pub enum f {
     /// Proposal is in the draft mode and can be voted on.
     Draft { timestamp: i64 },
     /// Proposal is live and ready for voting.
