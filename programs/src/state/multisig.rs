@@ -287,8 +287,133 @@ impl Multisig {
     pub fn transfer_token(
             ctx: Context<TransferToMultisig>,
             payment_amount: u64,
-            payment_id: u8,
+            result_id: u8,
         ) -> Result<()> {
+
+        let employer_payment_amount = 0;
+        let employee_payment_amount = 0;
+        let dao_payment_amount = 0;
+        let platform_payment_amount = 0;
+        match result_id {
+
+            //1:If the employee do not response within limit time.
+            //5:If the employee win in the dispute.
+            //Employer dispute fee -> DAO
+            //Employee dispute fee -> Employee
+            //payment -> Employee
+            //5% pltform fee ->platfrom
+            1 | 5 => {
+                employer_payment_amount = 0 * payment_amount;
+                employee_payment_amount = (1 + 0.02 - 0.05) * payment_amount;
+                dao_payment_amount = 0.02 * payment_amount;
+                platform_payment_amount = 0.05 * payment_amount;
+            },
+
+            //2:If the employer is satisfied by the employee's work.
+            //Employer dispute fee -> Employer
+            //Employee dispute fee -> Employee
+            //payment -> Employee
+            //5% pltform fee ->platfrom
+            2 => {
+                employer_payment_amount = 0.02 * payment_amount;
+                employee_payment_amount = (1 + 0.02 - 0.05) * payment_amount;
+                dao_payment_amount = 0 * payment_amount;
+                platform_payment_amount = 0.05 * payment_amount;
+            },
+
+            //3:If the employer win in the dispute.
+            //Employer dispute fee -> Employer
+            //Employee dispute fee -> DAO
+            //payment -> Employer
+            //No platform fee.
+            3 => {
+                employer_payment_amount = (1 + 0.02) * payment_amount;
+                employee_payment_amount = 0 * payment_amount;
+                dao_payment_amount = 0.02 * payment_amount;
+                platform_payment_amount = 0 * payment_amount;
+            },
+
+            //4:If the DAO split the payment equel to each others.
+            //Employer dispute fee/2 + Employee dispute fee/2 -> DAO
+            //Employer dispute fee/2 -> Enployer
+            //Employee dispute fee/2 -> Employee
+            //payment -> Employer
+            //5% pltform fee ->platfrom
+            4 => {
+                employer_payment_amount = (0.5 + 0.01) * payment_amount;
+                employee_payment_amount = (0.5 + 0.01 - 0.05) * payment_amount;
+                dao_payment_amount = (0.01 + 0.01) * payment_amount;
+                platform_payment_amount = 0.05 * payment_amount;
+            },
+
+        }
+
+
+        // Transfer tokens from multisig wallet to the employer
+        if employer_payment_amount {
+            let employer_transfer_ctx = ctx::new(
+                ctx.accounts.token_program.to_account_info().clone(),
+                Transfer {
+                    from: ctx.accounts.multisig_token_account.to_account_info().clone(),
+                    to: ctx.accounts.employer_token_account.to_account_info().clone(),
+                    authority: ctx.accounts.employer_authority.to_account_info().clone(),
+
+                },
+            );
+            token::transfer(employer_transfer_ctx, employer_payment_amount)?;
+
+        }
+
+        // Transfer tokens from multisig wallet to the employee
+        if employee_payment_amount {
+
+            let employee_transfer_ctx = CpiContext::new(
+                ctx.accounts.token_program.to_account_info().clone(),
+                Transfer {
+                    from: ctx.accounts.multisig_token_account.to_account_info().clone(),
+                    to: ctx.accounts.employee_token_account.to_account_info().clone(),
+                    authority: ctx.accounts.employee_authority.to_account_info().clone(),
+                },
+            );
+            token::transfer(employee_transfer_ctx, employee_payment_amount)?;
+        }
+
+        // Transfer tokens from multisig wallet to the DAO
+        if dao_payment_amount {
+            let dao_transfer_ctx = CpiContext::new(
+                ctx.accounts.token_program.to_account_info().clone(),
+                Transfer {
+                    from: ctx.accounts.multisig_token_account.to_account_info().clone(),
+                    to: ctx.accounts.dao_token_account.to_account_info().clone(),
+                    authority: ctx.accounts.dao_authority.to_account_info().clone(),
+                },
+            );
+            token::transfer(employee_transfer_ctx, dao_payment_amount)?;
+
+        }
+
+        // Transfer tokens from multisig wallet to the DAO
+        if platform_payment_amount {
+            let platform_transfer_ctx = CpiContext::new(
+                ctx.accounts.token_program.to_account_info().clone(),
+                Transfer {
+                    from: ctx.accounts.multisig_token_account.to_account_info().clone(),
+                    to: ctx.accounts.platform_token_account.to_account_info().clone(),
+                    authority: ctx.accounts.platform_authority.to_account_info().clone(),
+                },
+            );
+            token::transfer(platform_transfer_ctx, platform_payment_amount)?;
+        }
+        Ok(())
+
+    }
+
+    //Transfer payment by spliting with agreement of both
+    pub fn transfer_split_payment(
+        ctx: Context<TransferToMultisig>,
+        payment_amount: u64,
+        payment_id: u8,
+    ) -> Result<()> {
         // Transfer tokens from multisig wallet to the employer
         let employer_transfer_ctx = ctx::new(
             ctx.accounts.token_program.to_account_info().clone(),
@@ -334,59 +459,6 @@ impl Multisig {
         );
         token::transfer(platform_transfer_ctx, platform_amount)?;
         Ok(())
-    }
-
-    //Transfer payment by spliting with agreement of both
-    pub fn transfer_split_payment(
-        ctx: Context<TransferToMultisig>,
-        payment_amount: u64,
-        payment_id: u8,
-    ) -> Result<()> {
-    // Transfer tokens from multisig wallet to the employer
-    let employer_transfer_ctx = ctx::new(
-        ctx.accounts.token_program.to_account_info().clone(),
-        Transfer {
-            from: ctx.accounts.multisig_token_account.to_account_info().clone(),
-            to: ctx.accounts.employer_token_account.to_account_info().clone(),
-            authority: ctx.accounts.employer_authority.to_account_info().clone(),
-
-        },
-    );
-    token::transfer(employer_transfer_ctx, employer_amount)?;
-
-    // Transfer tokens from multisig wallet to the employee
-    let employee_transfer_ctx = CpiContext::new(
-        ctx.accounts.token_program.to_account_info().clone(),
-        Transfer {
-            from: ctx.accounts.multisig_token_account.to_account_info().clone(),
-            to: ctx.accounts.employee_token_account.to_account_info().clone(),
-            authority: ctx.accounts.employee_authority.to_account_info().clone(),
-        },
-    );
-    token::transfer(employee_transfer_ctx, employee_amount)?;
-
-    // Transfer tokens from multisig wallet to the DAO
-    let dao_transfer_ctx = CpiContext::new(
-        ctx.accounts.token_program.to_account_info().clone(),
-        Transfer {
-            from: ctx.accounts.multisig_token_account.to_account_info().clone(),
-            to: ctx.accounts.dao_token_account.to_account_info().clone(),
-            authority: ctx.accounts.dao_authority.to_account_info().clone(),
-        },
-    );
-    token::transfer(employee_transfer_ctx, dao_amount)?;
-
-    // Transfer tokens from multisig wallet to the DAO
-    let platform_transfer_ctx = CpiContext::new(
-        ctx.accounts.token_program.to_account_info().clone(),
-        Transfer {
-            from: ctx.accounts.multisig_token_account.to_account_info().clone(),
-            to: ctx.accounts.platform_token_account.to_account_info().clone(),
-            authority: ctx.accounts.platform_authority.to_account_info().clone(),
-        },
-    );
-    token::transfer(platform_transfer_ctx, platform_amount)?;
-    Ok(())
 }
 
 

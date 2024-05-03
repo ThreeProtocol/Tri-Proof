@@ -269,55 +269,55 @@ impl<'info> ConfigTransactionExecute<'info> {
                 //1:If the employee do not response within limit time.
                 ConfigAction::NotResponseEmployer {
                     payment_amount,
-                    payment_id
+                    result_id
                 } => {
                     multisig.transfer_token(
                         payment_amount,
-                        payment_id
+                        result_id
                     );
                 }
 
                 //2:If the employer is satisfied by the employee's work.
                 ConfigAction::SatisfiedEmployer {
                     payment_amount,
-                    payment_id
+                    result_id
                 } => {
                     multisig.transfer_token(
                         payment_amount,
-                        payment_id
+                        result_id
                     );
                 }
 
                 //3:If the employer win in the dispute.
                 ConfigAction::DAOAgreeWithEmployer { 
                     payment_amount,
-                    payment_id
+                    result_id
                 } => {
                     multisig.transfer_token(
                         payment_amount,
-                        payment_id
+                        result_id
                     );
                 }
 
                 //4:If the DAO split the payment equel to each others.
                 ConfigAction::DAOSplitPayment {
                     payment_amount,
-                    payment_id
+                    result_id
                 } => {
                     multisig.transfer_token(
                         payment_amount,
-                        payment_id
+                        result_id
                     );
                 }
 
                 //5:If the employee win in the dispute.
                 ConfigAction::DAOAgreeWithEmployee {
                     payment_amount,
-                    payment_id
+                    result_id
                 } => {
                     multisig.transfer_token(
                         payment_amount,
-                        payment_id
+                        result_id
                     );
                 }
 
