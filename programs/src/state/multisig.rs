@@ -255,7 +255,9 @@ impl Multisig {
     }
 
     ///Function that transfer token
-    pub fn accept_gig(ctx: Context<TransferToMultisig>, employer_amount: u64, employee_amount: u64,) -> Result<()> {
+    pub fn accept_gig(ctx: Context<TransferToMultisig>, payment_amount: u64) -> Result<()> {
+        let emplyer_payment_amount = payment_amount * (1 + 0.02 );
+        let employee_payment_amount = payment_amount * 0.02;
         let employer_transfer_ctx = ctx::new(
             ctx.accounts.token_program.to_account_info().clone(),
             Transfer {
@@ -264,7 +266,7 @@ impl Multisig {
                 authority: ctx.accounts.employer_authority.to_account_info().clone(),
             },
         );
-        token::transfer(employer_transfer_ctx, employer_amount)?;
+        token::transfer(employer_transfer_ctx, emplyer_payment_amount )?;
 
         // Transfer tokens from employee to the multisig wallet
         let employee_transfer_ctx = CpiContext::new(
@@ -275,20 +277,19 @@ impl Multisig {
                 authority: ctx.accounts.employee_authority.to_account_info().clone(),
             },
         );
-        token::transfer(employee_transfer_ctx, employee_amount)?;
+        token::transfer(employee_transfer_ctx, employee_payment_amount)?;
 
         Ok(())
+        msg!("Successfully charged to sigwallet PDA");
     }
 
 
     pub fn transfer_token(
-            ctx: Context<TransferToMultisig>, 
-            employer_amount: u64, 
-            employee_amount: u64, 
-            dao_amount: u64,
-            platform_amount: u64,
-        ) -> Result<()> {  
-        // Transfer tokens from multisig wallet to the employer           
+            ctx: Context<TransferToMultisig>,
+            payment_amount: u64,
+            payment_id: u8,
+        ) -> Result<()> {
+        // Transfer tokens from multisig wallet to the employer
         let employer_transfer_ctx = ctx::new(
             ctx.accounts.token_program.to_account_info().clone(),
             Transfer {
@@ -334,6 +335,59 @@ impl Multisig {
         token::transfer(platform_transfer_ctx, platform_amount)?;
         Ok(())
     }
+
+    //Transfer payment by spliting with agreement of both
+    pub fn transfer_split_payment(
+        ctx: Context<TransferToMultisig>,
+        payment_amount: u64,
+        payment_id: u8,
+    ) -> Result<()> {
+    // Transfer tokens from multisig wallet to the employer
+    let employer_transfer_ctx = ctx::new(
+        ctx.accounts.token_program.to_account_info().clone(),
+        Transfer {
+            from: ctx.accounts.multisig_token_account.to_account_info().clone(),
+            to: ctx.accounts.employer_token_account.to_account_info().clone(),
+            authority: ctx.accounts.employer_authority.to_account_info().clone(),
+
+        },
+    );
+    token::transfer(employer_transfer_ctx, employer_amount)?;
+
+    // Transfer tokens from multisig wallet to the employee
+    let employee_transfer_ctx = CpiContext::new(
+        ctx.accounts.token_program.to_account_info().clone(),
+        Transfer {
+            from: ctx.accounts.multisig_token_account.to_account_info().clone(),
+            to: ctx.accounts.employee_token_account.to_account_info().clone(),
+            authority: ctx.accounts.employee_authority.to_account_info().clone(),
+        },
+    );
+    token::transfer(employee_transfer_ctx, employee_amount)?;
+
+    // Transfer tokens from multisig wallet to the DAO
+    let dao_transfer_ctx = CpiContext::new(
+        ctx.accounts.token_program.to_account_info().clone(),
+        Transfer {
+            from: ctx.accounts.multisig_token_account.to_account_info().clone(),
+            to: ctx.accounts.dao_token_account.to_account_info().clone(),
+            authority: ctx.accounts.dao_authority.to_account_info().clone(),
+        },
+    );
+    token::transfer(employee_transfer_ctx, dao_amount)?;
+
+    // Transfer tokens from multisig wallet to the DAO
+    let platform_transfer_ctx = CpiContext::new(
+        ctx.accounts.token_program.to_account_info().clone(),
+        Transfer {
+            from: ctx.accounts.multisig_token_account.to_account_info().clone(),
+            to: ctx.accounts.platform_token_account.to_account_info().clone(),
+            authority: ctx.accounts.platform_authority.to_account_info().clone(),
+        },
+    );
+    token::transfer(platform_transfer_ctx, platform_amount)?;
+    Ok(())
+}
 
 
 #[derive(AnchorDeserialize, AnchorSerialize, InitSpace, Eq, PartialEq, Clone)]
@@ -385,20 +439,10 @@ pub struct TransferToMultisig<'info> {
     pub dao_authority: AccountInfo<'info>,
     pub platform_authority: AccountInfo<'info>,
 
-    #[account(mut)]
-    pub multisig_token_account: Account<'info, TokenAccount>,
     pub dao_token_account: Account<'info, TokenAccount>,
     pub platform_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 
 }
 
-
-#[account]
-pub struct Amount {
-    employer_amount: u64, 
-    employee_amount: u64, 
-    dao_amount: u64,
-    platform_amount: u64,
-}
 

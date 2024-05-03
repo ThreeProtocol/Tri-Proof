@@ -261,79 +261,77 @@ impl<'info> ConfigTransactionExecute<'info> {
                     // `rent_collector` doesn't affect the consensus parameters of the multisig.
                 }
 
-                ConfigAction::AcceptGig { employer_amount, employee_amount} => {
+                //If the job is accepted by the employee.
+                ConfigAction::AcceptGig { payment_amount } => {
                     multisig.accept_gig();
                 }
-                ConfigAction::NotResponseEmployer { 
-                    employer_amount: u64, 
-                    employee_amount: u64, 
-                    dao_amount: u64,
-                    platform_amount: u64,
-                 } => {
-                    multisig.transfer_token(
-                        employer_amount, 
-                        employee_amount, 
-                        dao_amount,
-                        platform_amount,
-                    );
-                }
-                ConfigAction::SatisfiedEmployer { 
-                    employer_amount: u64, 
-                    employee_amount: u64, 
-                    dao_amount: u64,
-                    platform_amount: u64,
-                 } => {
 
+                //1:If the employee do not response within limit time.
+                ConfigAction::NotResponseEmployer {
+                    payment_amount,
+                    payment_id
+                } => {
                     multisig.transfer_token(
-                        employer_amount, 
-                        employee_amount, 
-                        dao_amount,
-                        platform_amount,
+                        payment_amount,
+                        payment_id
                     );
                 }
 
+                //2:If the employer is satisfied by the employee's work.
+                ConfigAction::SatisfiedEmployer {
+                    payment_amount,
+                    payment_id
+                } => {
+                    multisig.transfer_token(
+                        payment_amount,
+                        payment_id
+                    );
+                }
+
+                //3:If the employer win in the dispute.
                 ConfigAction::DAOAgreeWithEmployer { 
-                    employer_amount: u64, 
-                    employee_amount: u64, 
-                    dao_amount: u64,
-                    platform_amount: u64,
-                 } => {
-
+                    payment_amount,
+                    payment_id
+                } => {
                     multisig.transfer_token(
-                        employer_amount, 
-                        employee_amount, 
-                        dao_amount,
-                        platform_amount,
+                        payment_amount,
+                        payment_id
                     );
                 }
-                ConfigAction::DAOSplitPayment { 
-                    employer_amount: u64, 
-                    employee_amount: u64, 
-                    dao_amount: u64,
-                    platform_amount: u64,
-                 } => {
 
+                //4:If the DAO split the payment equel to each others.
+                ConfigAction::DAOSplitPayment {
+                    payment_amount,
+                    payment_id
+                } => {
                     multisig.transfer_token(
-                        employer_amount, 
-                        employee_amount, 
-                        dao_amount,
-                        platform_amount,
+                        payment_amount,
+                        payment_id
                     );
                 }
-                ConfigAction::DAOAgreeWithEmployee { 
-                    employer_amount: u64, 
-                    employee_amount: u64, 
-                    dao_amount: u64,
-                    platform_amount: u64,
-                 } => {
 
+                //5:If the employee win in the dispute.
+                ConfigAction::DAOAgreeWithEmployee {
+                    payment_amount,
+                    payment_id
+                } => {
                     multisig.transfer_token(
-                        employer_amount, 
-                        employee_amount, 
-                        dao_amount,
-                        platform_amount,
+                        payment_amount,
+                        payment_id
                     );
                 }
+
+                //6:If Both agree to split payments.
+                ConfigAction::SplitPaymentByAgreement {
+                    payment_amount,
+                    employer_amout,
+                } => {
+                    multisig.transfer_split_payment(
+                        payment_amount,
+                        employer_amout
+                    );
+                }
+
             }
         }
 

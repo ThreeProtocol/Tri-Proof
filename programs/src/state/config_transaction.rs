@@ -78,7 +78,7 @@ pub enum ConfigAction {
     
     
     /// Accept the employer's gig.
-    AcceptGig { employer_amount: u64, employee_amount: u64, },
+    AcceptGig { payment_amount: u64 },
     /// The case that employer does not response in time.
     NotResponseEmployer {
         employer_amount: u64, 
