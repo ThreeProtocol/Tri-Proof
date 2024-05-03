@@ -274,7 +274,7 @@ impl Multisig {
         );
         token::transfer(employee_transfer_ctx, employee_amount)?;
 
-        Ok(())       
+        Ok(())
     }
 
 
@@ -307,7 +307,7 @@ impl Multisig {
             },
         );
         token::transfer(employee_transfer_ctx, employee_amount)?;
-        
+
         // Transfer tokens from multisig wallet to the DAO
         let dao_transfer_ctx = CpiContext::new(
             ctx.accounts.token_program.to_account_info().clone(),
@@ -315,7 +315,6 @@ impl Multisig {
                 from: ctx.accounts.multisig_token_account.to_account_info().clone(),
                 to: ctx.accounts.dao_token_account.to_account_info().clone(),
                 authority: ctx.accounts.dao_authority.to_account_info().clone(),
-                
             },
         );
         token::transfer(employee_transfer_ctx, dao_amount)?;
@@ -330,7 +329,7 @@ impl Multisig {
             },
         );
         token::transfer(platform_transfer_ctx, platform_amount)?;
-        Ok(())       
+        Ok(())
     }
 
 
