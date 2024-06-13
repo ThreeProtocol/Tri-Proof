@@ -1,18 +1,27 @@
 [toolchain]
+anchor_version = "0.29.0" # `anchor-cli` version to use
+solana_version = "1.17.0" # Solana version to use
 
 [features]
 seeds = false
 skip-lint = false
 
 [programs.localnet]
-gig_hub_coin_test = "GH1vm3L2rob7GzLLQCi5t9shgJDXSWCTA8zgJjhGNKXx"
+multisig = "GH1vm3L2rob7GzLLQCi5t9shgJDXSWCTA8zgJjhGNKXx"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "https://api.devnet.solana.com"
-wallet = "/home/rudy/.config/solana/id.json"
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[test.validator]
+url = "https://api.devnet.solana.com"
+
+[[test.validator.account]]
+address = "D3oQ6QxSYk6aKUsmBTa9BghFQvbRi7kxP6h95NSdjjXz"
+filename = "tests/fixtures/pre-rent-collector/multisig-account.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+test = "npx mocha --node-option require=ts-node/register --extension ts -t 1000000 tests/index.ts"

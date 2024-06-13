@@ -63,7 +63,7 @@ impl VaultTransactionCreate<'_> {
             multisig.member_has_permission(creator.key(), Permission::Initiate),
             MultisigError::Unauthorized
         );
-        
+
         Ok(())
     }
 

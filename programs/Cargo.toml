@@ -1,12 +1,13 @@
 [package]
-name = "trisig-program"
-version = "1.0.0"
-description = "tri sig DAO smart contract"
-edition = "2024"
+name = "squads-multisig-program"
+version = "2.0.0"
+description = "Squads Multisig Program V4"
+edition = "2021"
+license-file = "../../LICENSE"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "trisig_program"
+name = "squads_multisig_program"
 
 [features]
 no-entrypoint = []

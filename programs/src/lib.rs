@@ -15,12 +15,21 @@ pub use instructions::*;
 pub use state::*;
 pub use utils::SmallVec;
 
-pub mod errors;
+pub mod errors;   
 pub mod instructions;
 pub mod state;
 mod utils;
 
-
+#[cfg(not(feature = "no-entrypoint"))]
+security_txt! {
+    name: "Squads Multisig Program",
+    project_url: "https://squads.so",
+    contacts: "email:security@sqds.io,email:contact@osec.io",
+    policy: "https://github.com/Squads-Protocol/v4/blob/main/SECURITY.md",
+    preferred_languages: "en",
+    source_code: "https://github.com/squads-protocol/v4",
+    auditors: "OtterSec, Neodyme"
+}
 
 #[cfg(not(feature = "testing"))]
 declare_id!("SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf");
@@ -64,6 +73,11 @@ pub mod squads_multisig_program {
         ProgramConfig::program_config_set_treasury(ctx, args)
     }
 
+    /// Create a multisig.
+    #[allow(deprecated)]
+    pub fn multisig_create(ctx: Context<MultisigCreate>, args: MultisigCreateArgs) -> Result<()> {
+        MultisigCreate::multisig_create(ctx, args)
+    }
 
     /// Create a multisig.
     pub fn multisig_create_v2(
@@ -146,7 +160,7 @@ pub mod squads_multisig_program {
     }
 
     /// Execute a config transaction.
-    /// The transaction must be `Approved`.
+    /// The transaction must be `Approved`.j9
     pub fn config_transaction_execute<'info>(
         ctx: Context<'_, '_, 'info, 'info, ConfigTransactionExecute<'info>>,
     ) -> Result<()> {
@@ -193,7 +207,7 @@ pub mod squads_multisig_program {
     /// Update status of a multisig proposal from `Draft` to `Active`.
     pub fn proposal_activate(ctx: Context<ProposalActivate>) -> Result<()> {
         ProposalActivate::proposal_activate(ctx)
-    } 
+    }
 
     /// Approve a multisig proposal on behalf of the `member`.
     /// The proposal must be `Active`.

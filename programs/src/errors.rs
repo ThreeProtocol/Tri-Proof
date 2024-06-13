@@ -6,7 +6,7 @@ pub enum MultisigError {
     DuplicateMember,
     #[msg("Members array is empty")]
     EmptyMembers,
-    #[msg("Too many members, can be up to 3")]
+    #[msg("Too many members, can be up to 10")]
     TooManyMembers,
     #[msg("Invalid threshold, must be between 1 and number of members with Vote permission")]
     InvalidThreshold,

@@ -7,7 +7,7 @@ use crate::TransactionMessage;
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct BatchAddTransactionArgs {
     /// Number of ephemeral signing PDAs required by the transaction.
-    pub c_signers: u8,
+    pub ephemeral_signers: u8,
     pub transaction_message: Vec<u8>,
 }
 
