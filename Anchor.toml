@@ -7,14 +7,14 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-multisig = "GH1vm3L2rob7GzLLQCi5t9shgJDXSWCTA8zgJjhGNKXx"
+squads_multisig_program = "CZyMGMfPFhrpMupVjrBdHt48kpNFkUQrQco8aF9TwSvW"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
-wallet = "~/.config/solana/id.json"
+cluster = "devnet"
+wallet = "/home/rrr/.config/solana/id.json"
 
 [test.validator]
 url = "https://api.devnet.solana.com"
